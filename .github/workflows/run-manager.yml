@@ -7,6 +7,8 @@ on:
         description: "Seconds to collect queued Telegram messages (max 30)"
         required: false
         default: "5"
+  schedule:
+    - cron: "*/15 * * * *"
 
 permissions:
   contents: write
@@ -37,7 +39,8 @@ jobs:
           TELEGRAM_ADMIN_ID: ${{ secrets.TELEGRAM_ADMIN_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          POLL_SECONDS: ${{ inputs.poll_seconds }}
+          POLL_SECONDS: ${{ inputs.poll_seconds || '5' }}
+          QUIET_EMPTY: ${{ github.event_name == 'schedule' && '1' || '0' }}
         run: node src/index.js
 
       - name: Commit subscription rotation and state
