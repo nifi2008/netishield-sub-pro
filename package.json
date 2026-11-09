@@ -1,0 +1,13 @@
+{
+  "name": "netishield-manager",
+  "version": "1.1.0",
+  "private": true,
+  "description": "One-shot Telegram V2Ray subscription manager with GitHub rotation",
+  "type": "module",
+  "scripts": {
+    "run": "node src/index.js",
+    "check": "node --check src/index.js && node --check src/processor.js && node --check src/telegram.js && node --check src/github.js && node --check src/state.js && node --check src/collect.js && node --check src/report.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=20" }
+}
