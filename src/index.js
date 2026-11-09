@@ -18,7 +18,8 @@ function loadConfig(env) {
   }
   const parsed = Number(env.POLL_SECONDS ?? 5);
   const pollSeconds = Number.isFinite(parsed) ? Math.min(30, Math.max(0, parsed)) : 5;
-  return { token, adminId, pollSeconds };
+  const quietEmpty = env.QUIET_EMPTY === "1";
+  return { token, adminId, pollSeconds, quietEmpty };
 }
 
 async function main() {
@@ -36,7 +37,10 @@ async function main() {
 
   if (!inputs.length) {
     await writeJsonAtomic(OFFSET_FILE, { offset: nextOffset, updatedAt: new Date().toISOString() });
-    await telegram.send(config.adminId, NO_INPUT_TEXT);
+    // In scheduled runs with nothing queued, stay silent to avoid a message every 15 minutes.
+    if (!config.quietEmpty) {
+      await telegram.send(config.adminId, NO_INPUT_TEXT);
+    }
     return;
   }
 
