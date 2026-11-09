@@ -1,0 +1,55 @@
+name: NetiShield Manager
+
+on:
+  workflow_dispatch:
+    inputs:
+      poll_seconds:
+        description: "Seconds to collect queued Telegram messages (max 30)"
+        required: false
+        default: "5"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: netishield-manager
+  cancel-in-progress: false
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check and test
+        run: npm run check && npm test
+
+      - name: Run one-shot manager
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_ID: ${{ secrets.TELEGRAM_ADMIN_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          POLL_SECONDS: ${{ inputs.poll_seconds }}
+        run: node src/index.js
+
+      - name: Commit subscription rotation and state
+        if: always()
+        run: |
+          if [[ -n "$(git status --porcelain subscriptions state)" ]]; then
+            git config user.name "NetiShield Manager"
+            git config user.email "actions@users.noreply.github.com"
+            git add subscriptions state
+            git commit -m "chore: update subscriptions"
+            git pull --rebase
+            git push
+          else
+            echo "No repository changes."
+          fi
