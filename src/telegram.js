@@ -80,6 +80,17 @@ export class Telegram {
     }
   }
 
+  /** Sends one HTML-formatted message with an inline keyboard (used for the channel post). */
+  sendPost(chatId, html, keyboard) {
+    return this.call("sendMessage", {
+      chat_id: chatId,
+      text: html,
+      parse_mode: "HTML",
+      reply_markup: keyboard,
+      link_preview_options: { is_disabled: true }
+    });
+  }
+
   async getDocumentText(fileId) {
     const file = await this.call("getFile", { file_id: fileId });
     if (!file.file_path) throw new Error("Telegram did not return a file path");
