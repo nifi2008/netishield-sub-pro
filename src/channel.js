@@ -48,10 +48,10 @@ function slotLine(index, state, updatedIndex) {
  * Builds the channel post text and its inline keyboard.
  * Copy buttons use copy_text; the purchase button is green (style "success").
  */
-export function buildChannelPost({ repository, state, updatedFile, totalConfigs, counts }) {
-  const updatedIndex = Number.parseInt(updatedFile, 10);
+export function buildChannelPost({ repository, state, updatedFile, totalConfigs, counts, runAt }) {
+  const updatedIndex = updatedFile ? Number.parseInt(updatedFile, 10) : null;
   const protocols =
-    Object.entries(counts)
+    Object.entries(counts || {})
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([name, count]) => `${escapeHtml(name)}: ${count}`)
       .join(" • ") || "—";
@@ -61,10 +61,10 @@ export function buildChannelPost({ repository, state, updatedFile, totalConfigs,
   const text = [
     "🏴‍☠️ <b>NETISHIELD | ساب‌لینک V2Ray</b> 🏴‍☠️",
     "",
-    `🔄 <b>آخرین آپدیت:</b> ساب ${updatedIndex}`,
-    `🧩 <b>تعداد کانفیگ:</b> ${totalConfigs}`,
+    `🔄 <b>آخرین آپدیت کانفیگ:</b> ${updatedIndex ? `ساب ${updatedIndex}` : "هنوز ثبت نشده"}`,
+    `🧩 <b>تعداد کانفیگ:</b> ${totalConfigs ?? 0}`,
     `🛰 <b>پروتکل‌ها:</b> ${protocols}`,
-    `🕒 <b>زمان آپدیت:</b> ${formatTime(new Date().toISOString())}`,
+    `🕒 <b>آخرین بررسی ربات:</b> ${formatTime(runAt)}`,
     "",
     "📦 <b>وضعیت ساب‌ها:</b>",
     ...slots,
@@ -95,14 +95,27 @@ export function buildChannelPost({ repository, state, updatedFile, totalConfigs,
 }
 
 /**
- * Sends the channel post once, then edits that same message on every later publish.
+ * Called on every run. Sends the channel post the first time, then edits that same message.
+ * When `publication` is null (no new configs), the last known summary is kept and only
+ * the status and run time are refreshed.
  * @returns {Promise<"sent" | "edited">}
  */
-export async function publishChannelPost(telegram, { channelId, repository, updatedFile, totalConfigs, counts }) {
-  const state = await readJson(ROTATION_FILE, { files: {} });
-  const { text, keyboard } = buildChannelPost({ repository, state, updatedFile, totalConfigs, counts });
+export async function publishChannelPost(telegram, { channelId, repository, publication = null, result = null }) {
   const saved = await readJson(CHANNEL_STATE_FILE, null);
-  const sameChannel = saved && String(saved.chatId) === String(channelId);
+  const sameChannel = Boolean(saved) && String(saved.chatId) === String(channelId);
+  const previous = sameChannel ? saved.summary : null;
+
+  const summary = publication
+    ? { updatedFile: publication.file, totalConfigs: result.total, counts: result.counts }
+    : previous || { updatedFile: null, totalConfigs: 0, counts: {} };
+
+  const state = await readJson(ROTATION_FILE, { files: {} });
+  const { text, keyboard } = buildChannelPost({
+    repository,
+    state,
+    runAt: new Date().toISOString(),
+    ...summary
+  });
 
   if (sameChannel && saved.messageId) {
     try {
@@ -114,19 +127,28 @@ export async function publishChannelPost(telegram, { channelId, repository, upda
         reply_markup: keyboard,
         link_preview_options: { is_disabled: true }
       });
+      await saveChannelState(channelId, saved.messageId, summary);
       return "edited";
     } catch (error) {
-      if (NOT_MODIFIED_RE.test(error.message)) return "edited";
+      if (NOT_MODIFIED_RE.test(error.message)) {
+        await saveChannelState(channelId, saved.messageId, summary);
+        return "edited";
+      }
       if (!MISSING_MESSAGE_RE.test(error.message)) throw error;
       // The post was deleted or is no longer editable; a new one is sent below.
     }
   }
 
   const sent = await telegram.sendPost(channelId, text, keyboard);
+  await saveChannelState(channelId, sent.message_id, summary);
+  return "sent";
+}
+
+async function saveChannelState(channelId, messageId, summary) {
   await writeJsonAtomic(CHANNEL_STATE_FILE, {
     chatId: String(channelId),
-    messageId: sent.message_id,
+    messageId,
+    summary,
     updatedAt: new Date().toISOString()
   });
-  return "sent";
 }
