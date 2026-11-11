@@ -29,15 +29,17 @@ function loadConfig(env) {
   };
 }
 
-async function postToChannel(telegram, config, result, publication) {
-  if (!config.channelId) return null;
+/** Runs on every execution. Non-fatal: a channel failure must not stop the admin report. */
+async function postToChannel(telegram, config, publication, result) {
+  if (!config.channelId) {
+    return "ارسال نشد: TELEGRAM_CHANNEL_ID در اجرا خالی است";
+  }
   try {
     const action = await publishChannelPost(telegram, {
       channelId: config.channelId,
       repository: config.repository,
-      updatedFile: publication.file,
-      totalConfigs: result.total,
-      counts: result.counts
+      publication,
+      result
     });
     return action === "sent" ? "پست جدید ارسال شد" : "پست قبلی ویرایش شد";
   } catch (error) {
@@ -59,23 +61,28 @@ async function main() {
     onHelp: () => telegram.send(config.adminId, HELP_TEXT)
   });
 
-  if (!inputs.length) {
-    await writeJsonAtomic(OFFSET_FILE, { offset: nextOffset, updatedAt: new Date().toISOString() });
-    // In scheduled runs with nothing queued, stay silent to avoid a message every 15 minutes.
-    if (!config.quietEmpty) {
-      await telegram.send(config.adminId, NO_INPUT_TEXT);
-    }
-    return;
+  let result = null;
+  let publication = null;
+  if (inputs.length) {
+    result = processConfigs(inputs);
+    publication = result.total > 0 ? await publishRotation(result.configs, config.repository) : null;
   }
-
-  const result = processConfigs(inputs);
-  const publication = result.total > 0 ? await publishRotation(result.configs, config.repository) : null;
 
   // Saved only after publishing succeeded, so a failed run can be retried without losing messages.
   await writeJsonAtomic(OFFSET_FILE, { offset: nextOffset, updatedAt: new Date().toISOString() });
 
-  // Channel post is non-fatal: a failure there must not hide the admin report.
-  const channelStatus = publication ? await postToChannel(telegram, config, result, publication) : null;
+  // Updated on every run, whether or not new configs were published.
+  const channelStatus = await postToChannel(telegram, config, publication, result);
+
+  if (!inputs.length) {
+    if (!config.quietEmpty) {
+      await telegram.send(config.adminId, NO_INPUT_TEXT);
+    } else if (channelStatus.startsWith("ارسال نشد")) {
+      // Scheduled runs stay silent, but a failing channel should still be reported.
+      await telegram.send(config.adminId, `NetiShield Manager\n${channelStatus}`);
+    }
+    return;
+  }
 
   await telegram.send(config.adminId, buildReport(result, publication, channelStatus));
 }
