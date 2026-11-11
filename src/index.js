@@ -35,13 +35,16 @@ async function postToChannel(telegram, config, publication, result) {
     return "ارسال نشد: TELEGRAM_CHANNEL_ID در اجرا خالی است";
   }
   try {
-    const action = await publishChannelPost(telegram, {
+    const { action, mode, fallbackReason } = await publishChannelPost(telegram, {
       channelId: config.channelId,
       repository: config.repository,
       publication,
       result
     });
-    return action === "sent" ? "پست جدید ارسال شد" : "پست قبلی ویرایش شد";
+    const label = action === "sent" ? "پست جدید ارسال شد" : "پست قبلی ویرایش شد";
+    if (mode === "rich") return `${label} (Rich Message)`;
+    const reason = fallbackReason ? `: ${fallbackReason}` : "";
+    return `${label} (نسخه‌ی ساده${reason})`;
   } catch (error) {
     console.error("Channel post failed:", error.message);
     return `ارسال نشد (${error.message})`;
@@ -76,10 +79,9 @@ async function main() {
 
   if (!inputs.length) {
     if (!config.quietEmpty) {
-      await telegram.send(config.adminId, NO_INPUT_TEXT);
+      await telegram.send(config.adminId, `${NO_INPUT_TEXT}\n\nپست کانال: ${channelStatus}`);
     } else if (channelStatus.startsWith("ارسال نشد")) {
-      // Scheduled runs stay silent, but a failing channel should still be reported.
-      await telegram.send(config.adminId, `NetiShield Manager\n${channelStatus}`);
+      await telegram.send(config.adminId, `NetiShield Manager\nپست کانال: ${channelStatus}`);
     }
     return;
   }
