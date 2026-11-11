@@ -21,15 +21,19 @@ async function ensureSlots() {
   }
 }
 
-/** Time used to pick the least recently updated slot: recorded state first, file mtime as fallback. */
-async function lastUpdatedOf(index, state) {
+/**
+ * Time of the last publish for a slot, taken only from the recorded state.
+ * File mtime is not used: in CI every checkout gets the same mtime, which made
+ * slot 1 look oldest forever. A slot that was never published counts as 0,
+ * so it is chosen before any slot that has already been published.
+ */
+function lastPublishedAt(index, state) {
   const recorded = new Date(state.files[slotName(index)]?.lastUpdated || "").getTime();
-  if (Number.isFinite(recorded)) return recorded;
-  return (await fs.stat(slotPath(index))).mtime.getTime();
+  return Number.isFinite(recorded) ? recorded : 0;
 }
 
 /**
- * Replaces the least recently updated subscription file with `configs`.
+ * Replaces the least recently published subscription file with `configs`.
  * @returns {Promise<{file: string, url: string, firstUpdated: string, lastUpdated: string}>}
  */
 export async function publishRotation(configs, repository = process.env.GITHUB_REPOSITORY) {
@@ -44,7 +48,7 @@ export async function publishRotation(configs, repository = process.env.GITHUB_R
 
   const candidates = [];
   for (let i = 1; i <= SLOT_COUNT; i++) {
-    candidates.push({ index: i, time: await lastUpdatedOf(i, state) });
+    candidates.push({ index: i, time: lastPublishedAt(i, state) });
   }
   candidates.sort((a, b) => a.time - b.time || a.index - b.index);
   const target = candidates[0].index;
