@@ -4,6 +4,7 @@ import { publishRotation } from "./github.js";
 import { readJson, writeJsonAtomic } from "./state.js";
 import { collectAdminInputs } from "./collect.js";
 import { buildReport, HELP_TEXT, NO_INPUT_TEXT } from "./report.js";
+import { publishChannelPost } from "./channel.js";
 
 const OFFSET_FILE = "state/telegram-offset.json";
 
@@ -18,8 +19,31 @@ function loadConfig(env) {
   }
   const parsed = Number(env.POLL_SECONDS ?? 5);
   const pollSeconds = Number.isFinite(parsed) ? Math.min(30, Math.max(0, parsed)) : 5;
-  const quietEmpty = env.QUIET_EMPTY === "1";
-  return { token, adminId, pollSeconds, quietEmpty };
+  return {
+    token,
+    adminId,
+    pollSeconds,
+    quietEmpty: env.QUIET_EMPTY === "1",
+    repository: env.GITHUB_REPOSITORY,
+    channelId: String(env.TELEGRAM_CHANNEL_ID || "").trim()
+  };
+}
+
+async function postToChannel(telegram, config, result, publication) {
+  if (!config.channelId) return null;
+  try {
+    const action = await publishChannelPost(telegram, {
+      channelId: config.channelId,
+      repository: config.repository,
+      updatedFile: publication.file,
+      totalConfigs: result.total,
+      counts: result.counts
+    });
+    return action === "sent" ? "پست جدید ارسال شد" : "پست قبلی ویرایش شد";
+  } catch (error) {
+    console.error("Channel post failed:", error.message);
+    return `ارسال نشد (${error.message})`;
+  }
 }
 
 async function main() {
@@ -45,11 +69,15 @@ async function main() {
   }
 
   const result = processConfigs(inputs);
-  const publication = result.total > 0 ? await publishRotation(result.configs) : null;
+  const publication = result.total > 0 ? await publishRotation(result.configs, config.repository) : null;
 
   // Saved only after publishing succeeded, so a failed run can be retried without losing messages.
   await writeJsonAtomic(OFFSET_FILE, { offset: nextOffset, updatedAt: new Date().toISOString() });
-  await telegram.send(config.adminId, buildReport(result, publication));
+
+  // Channel post is non-fatal: a failure there must not hide the admin report.
+  const channelStatus = publication ? await postToChannel(telegram, config, result, publication) : null;
+
+  await telegram.send(config.adminId, buildReport(result, publication, channelStatus));
 }
 
 try {
