@@ -3,9 +3,13 @@
   "messageId": 6,
   "mode": "rich",
   "summary": {
-    "updatedFile": null,
-    "totalConfigs": 0,
-    "counts": {}
+    "updatedFile": "5.txt",
+    "totalConfigs": 20,
+    "counts": {
+      "vless": 11,
+      "ss": 7,
+      "trojan": 2
+    }
   },
-  "updatedAt": "2026-11-12T03:14:42.763Z"
+  "updatedAt": "2026-11-12T11:27:49.675Z"
 }
