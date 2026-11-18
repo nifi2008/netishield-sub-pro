@@ -3,14 +3,12 @@
   "messageId": 6,
   "mode": "rich",
   "summary": {
-    "updatedFile": "5.txt",
-    "totalConfigs": 203,
+    "updatedFile": "6.txt",
+    "totalConfigs": 78,
     "counts": {
-      "vless": 161,
-      "ss": 34,
-      "hysteria2": 3,
-      "trojan": 5
+      "vless": 72,
+      "ss": 6
     }
   },
-  "updatedAt": "2026-11-18T02:26:34.806Z"
+  "updatedAt": "2026-11-18T10:32:52.267Z"
 }
