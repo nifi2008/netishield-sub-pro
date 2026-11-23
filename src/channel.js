@@ -7,6 +7,7 @@ const SUB_DIR = "subscriptions";
 const SLOT_COUNT = 7;
 const MAX_POST_CHARS = 4096;
 const KEYCAPS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"];
+const CLIENTS = ["V2Box", "v2rayNG", "Streisand", "Hiddify", "NekoBox"];
 
 // Rich Messages are off. Set to true to try them; the classic post is used if Telegram refuses.
 const USE_RICH = false;
@@ -113,32 +114,40 @@ export function buildRichPost({ state, updatedFile, totalConfigs, counts, runAt 
 }
 
 /**
- * Classic post: only the updated subscription link, in a code block so one tap copies it.
+ * Classic post, in the approved template. Only the updated subscription link is shown,
+ * inside a code block so one tap copies it.
  */
 export function buildChannelPost({ repository, updatedFile }) {
   const updatedIndex = slotIndex(updatedFile);
+  const link = updatedIndex ? escapeHtml(subscriptionUrl(repository, updatedIndex)) : null;
 
-  const body = updatedIndex
-    ? [
-        `📌 <b>ساب‌لینک آپدیت‌شده (ساب ${updatedIndex}):</b>`,
-        `<blockquote><code>${subscriptionUrl(repository, updatedIndex)}</code></blockquote>`,
-        "",
-        "🔷 <b>نکته مهم:</b>",
-        "ساب‌لینک را از بخش Subscription کلاینت اضافه کنید.",
-        "اگر ساب‌لینک اضافه نشد، VPN کمکی را روشن کنید."
-      ]
-    : ["هنوز ساب‌لینکی منتشر نشده است."];
+  const linkBlock = link
+    ? `<blockquote><code>${link}</code></blockquote>`
+    : "<blockquote>هنوز ساب‌لینکی منتشر نشده است.</blockquote>";
+
+  const clientsBlock = `<blockquote>${CLIENTS.map(name => `🔐 ${name}`).join("\n")}</blockquote>`;
 
   const text = [
-    "🏴‍☠️ <b>NETISHIELD | ساب‌لینک V2Ray</b> 🏴‍☠️",
+    "NETISHIELD | ساب‌لینک V2Ray",
     "",
-    "🌍 <b>لوکیشن‌های متنوع، اتصال پایدار و سریع</b>",
+    "▬ لوکیشن‌های متنوع، اتصال پایدار و سریع",
     "",
-    ...body,
+    "📌 برای کپی ساب‌لینک، روی لینک زیر بزنید:",
+    linkBlock,
+    "",
+    "📞 کلاینت‌های پشتیبانی‌شده:",
+    clientsBlock,
+    "",
+    "🔷 نکته مهم:",
+    "ساب‌لینک را از بخش Subscription کلاینت اضافه کنید.",
+    "",
+    "🔷 اگر ساب لینک اضافه نشد VPN کمکی را روشن کنید.",
     "",
     "💎 اگر مفید بود، ری‌اکشن بزنید رفیق 💎",
     "",
-    "#تحریم #v2box #فیلتر #vpn"
+    "#تحریم #v2box #فیلتر #vpn",
+    "",
+    "<blockquote>NETISHIELD</blockquote>"
   ].join("\n");
 
   if (text.length > MAX_POST_CHARS) {
