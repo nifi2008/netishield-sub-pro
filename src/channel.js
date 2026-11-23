@@ -1,19 +1,16 @@
 import { readJson, writeJsonAtomic } from "./state.js";
 
 export const SHOP_URL = "https://t.me/netishieldconnectixbot";
+export const CHANNEL_LINK = "https://t.me/NetiShield";
 const ROTATION_FILE = "state/rotation.json";
 const CHANNEL_STATE_FILE = "state/channel.json";
 const SUB_DIR = "subscriptions";
 const SLOT_COUNT = 7;
 const MAX_POST_CHARS = 4096;
-const KEYCAPS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"];
 const CLIENTS = ["V2Box", "v2rayNG", "Streisand", "Hiddify", "NekoBox"];
 
 // Rich Messages are off. Set to true to try them; the classic post is used if Telegram refuses.
 const USE_RICH = false;
-
-const MISSING_MESSAGE_RE = /message to edit not found|message can't be edited|MESSAGE_ID_INVALID/i;
-const NOT_MODIFIED_RE = /message is not modified/i;
 
 export function escapeHtml(value) {
   return String(value)
@@ -78,6 +75,7 @@ export function buildKeyboard(repository, updatedIndex) {
 /** Rich Message (Bot API 10.1). Used only when USE_RICH is true. */
 export function buildRichPost({ state, updatedFile, totalConfigs, counts, runAt }) {
   const updatedIndex = slotIndex(updatedFile);
+  const KEYCAPS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"];
 
   const slotRows = Array.from({ length: SLOT_COUNT }, (_, i) => {
     const index = i + 1;
@@ -147,7 +145,7 @@ export function buildChannelPost({ repository, updatedFile }) {
     "",
     "#تحریم #v2box #فیلتر #vpn",
     "",
-    "<blockquote>NETISHIELD</blockquote>"
+    `<blockquote><a href="${CHANNEL_LINK}">NETISHIELD</a></blockquote>`
   ].join("\n");
 
   if (text.length > MAX_POST_CHARS) {
@@ -176,65 +174,23 @@ async function sendNew(telegram, { channelId, rich, classic, keyboard }) {
   return { messageId: sent.message_id, mode: "classic", fallbackReason };
 }
 
-function editExisting(telegram, { channelId, messageId, mode, rich, classic, keyboard }) {
-  if (mode === "rich") {
-    return telegram.call("editMessageText", {
-      chat_id: channelId,
-      message_id: messageId,
-      rich_message: { html: rich.html },
-      reply_markup: keyboard
-    });
-  }
-  return telegram.call("editMessageText", {
-    chat_id: channelId,
-    message_id: messageId,
-    text: classic.text,
-    parse_mode: "HTML",
-    reply_markup: keyboard,
-    link_preview_options: { is_disabled: true }
-  });
-}
-
 /**
- * Called on every run. Edits the saved post when it uses the current mode,
- * otherwise sends a new one. Old posts in the channel are not removed automatically.
- * @returns {Promise<{action: "sent" | "edited", mode: "rich" | "classic", fallbackReason: string | null}>}
+ * Sends a new post only when this run published new configs.
+ * Otherwise the channel is not touched at all.
+ * @returns {Promise<{action: "sent" | "skipped", mode: "rich" | "classic" | null, fallbackReason: string | null}>}
  */
 export async function publishChannelPost(telegram, { channelId, repository, publication = null, result = null }) {
-  const saved = await readJson(CHANNEL_STATE_FILE, null);
-  const sameChannel = Boolean(saved) && String(saved.chatId) === String(channelId);
-  const previous = sameChannel ? saved.summary : null;
-
-  const summary = publication
-    ? { updatedFile: publication.file, totalConfigs: result.total, counts: result.counts }
-    : previous || { updatedFile: null, totalConfigs: 0, counts: {} };
+  if (!publication) {
+    return { action: "skipped", mode: null, fallbackReason: null };
+  }
 
   const state = await readJson(ROTATION_FILE, { files: {} });
   const runAt = new Date().toISOString();
+  const summary = { updatedFile: publication.file, totalConfigs: result.total, counts: result.counts };
   const rich = buildRichPost({ state, runAt, ...summary });
   const classic = buildChannelPost({ repository, updatedFile: summary.updatedFile });
-  const keyboard = classic.keyboard;
-  const mode = USE_RICH ? "rich" : "classic";
 
-  if (sameChannel && saved.messageId && saved.mode === mode) {
-    const messageId = saved.messageId;
-    let stillExists = true;
-    try {
-      await editExisting(telegram, { channelId, messageId, mode, rich, classic, keyboard });
-    } catch (error) {
-      if (MISSING_MESSAGE_RE.test(error.message)) {
-        stillExists = false;
-      } else if (!NOT_MODIFIED_RE.test(error.message)) {
-        throw error;
-      }
-    }
-    if (stillExists) {
-      await saveChannelState(channelId, messageId, summary, mode);
-      return { action: "edited", mode, fallbackReason: null };
-    }
-  }
-
-  const sent = await sendNew(telegram, { channelId, rich, classic, keyboard });
+  const sent = await sendNew(telegram, { channelId, rich, classic, keyboard: classic.keyboard });
   await saveChannelState(channelId, sent.messageId, summary, sent.mode);
   return { action: "sent", mode: sent.mode, fallbackReason: sent.fallbackReason };
 }
