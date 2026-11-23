@@ -3,7 +3,7 @@
   "messageId": 9,
   "mode": "classic",
   "summary": {
-    "updatedFile": "5.txt",
+    "updatedFile": "6.txt",
     "totalConfigs": 244,
     "counts": {
       "vless": 170,
@@ -12,5 +12,5 @@
       "trojan": 19
     }
   },
-  "updatedAt": "2026-11-23T05:42:10.846Z"
+  "updatedAt": "2026-11-23T05:45:22.594Z"
 }
