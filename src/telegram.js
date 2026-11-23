@@ -91,7 +91,6 @@ export class Telegram {
       parse_mode: "HTML",
       reply_markup: keyboard,
       link_preview_options: { is_disabled: true },
-      protect_content: true
     });
   }
 
