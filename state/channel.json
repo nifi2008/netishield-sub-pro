@@ -1,9 +1,9 @@
 {
   "chatId": "-1004385555375",
-  "messageId": 6,
-  "mode": "rich",
+  "messageId": 9,
+  "mode": "classic",
   "summary": {
-    "updatedFile": "4.txt",
+    "updatedFile": "5.txt",
     "totalConfigs": 244,
     "counts": {
       "vless": 170,
@@ -12,5 +12,5 @@
       "trojan": 19
     }
   },
-  "updatedAt": "2026-11-23T05:30:34.849Z"
+  "updatedAt": "2026-11-23T05:42:10.846Z"
 }
