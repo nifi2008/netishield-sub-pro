@@ -7,8 +7,8 @@
     },
     "2.txt": {
       "firstUpdated": "2026-11-11T06:00:59.810Z",
-      "lastUpdated": "2026-11-20T16:45:04.548Z",
-      "configCount": 298
+      "lastUpdated": "2026-11-23T06:40:21.157Z",
+      "configCount": 244
     },
     "3.txt": {
       "firstUpdated": "2026-11-11T21:38:22.127Z",
@@ -36,6 +36,6 @@
       "configCount": 244
     }
   },
-  "lastFile": "1.txt",
-  "lastUpdated": "2026-11-23T06:34:47.311Z"
+  "lastFile": "2.txt",
+  "lastUpdated": "2026-11-23T06:40:21.157Z"
 }
