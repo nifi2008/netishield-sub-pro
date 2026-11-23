@@ -8,6 +8,7 @@ const SUB_DIR = "subscriptions";
 const SLOT_COUNT = 7;
 const MAX_POST_CHARS = 4096;
 const CLIENTS = ["V2Box", "v2rayNG", "Streisand", "Hiddify", "NekoBox"];
+const KEYCAPS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"];
 
 // Rich Messages are off. Set to true to try them; the classic post is used if Telegram refuses.
 const USE_RICH = false;
@@ -54,28 +55,27 @@ function protocolsText(counts) {
 }
 
 /**
- * Copy button for the updated subscription (blue), then the purchase button (green).
- * Without a published subscription, only the purchase button is shown.
+ * Only a copy button for the updated subscription. The text has no number and no emoji.
+ * Returns undefined when nothing is published, so the post is sent without buttons.
  */
 export function buildKeyboard(repository, updatedIndex) {
-  const rows = [];
-  if (updatedIndex) {
-    rows.push([
-      {
-        text: `📋 کپی ساب ${updatedIndex}`,
-        copy_text: { text: subscriptionUrl(repository, updatedIndex) },
-        style: "primary"
-      }
-    ]);
-  }
-  rows.push([{ text: "🛒 خرید اشتراک", url: SHOP_URL, style: "success" }]);
-  return { inline_keyboard: rows };
+  if (!updatedIndex) return undefined;
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: "کپی ساب",
+          copy_text: { text: subscriptionUrl(repository, updatedIndex) },
+          style: "primary"
+        }
+      ]
+    ]
+  };
 }
 
 /** Rich Message (Bot API 10.1). Used only when USE_RICH is true. */
 export function buildRichPost({ state, updatedFile, totalConfigs, counts, runAt }) {
   const updatedIndex = slotIndex(updatedFile);
-  const KEYCAPS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"];
 
   const slotRows = Array.from({ length: SLOT_COUNT }, (_, i) => {
     const index = i + 1;
@@ -162,7 +162,8 @@ async function sendNew(telegram, { channelId, rich, classic, keyboard }) {
       const sent = await telegram.call("sendRichMessage", {
         chat_id: channelId,
         rich_message: { html: rich.html },
-        reply_markup: keyboard
+        reply_markup: keyboard,
+        protect_content: true
       });
       return { messageId: sent.message_id, mode: "rich", fallbackReason: null };
     } catch (error) {
