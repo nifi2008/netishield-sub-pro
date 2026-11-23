@@ -80,14 +80,18 @@ export class Telegram {
     }
   }
 
-  /** Sends one HTML-formatted message with an inline keyboard (used for the channel post). */
+  /**
+   * Sends one HTML-formatted message with an optional inline keyboard.
+   * protect_content stops the post from being forwarded or saved, so the buttons stay hidden on forwards.
+   */
   sendPost(chatId, html, keyboard) {
     return this.call("sendMessage", {
       chat_id: chatId,
       text: html,
       parse_mode: "HTML",
       reply_markup: keyboard,
-      link_preview_options: { is_disabled: true }
+      link_preview_options: { is_disabled: true },
+      protect_content: true
     });
   }
 
