@@ -27,8 +27,8 @@
     },
     "6.txt": {
       "firstUpdated": "2026-11-13T00:24:38.026Z",
-      "lastUpdated": "2026-11-23T05:45:21.899Z",
-      "configCount": 244
+      "lastUpdated": "2026-11-26T11:24:38.445Z",
+      "configCount": 331
     },
     "7.txt": {
       "firstUpdated": "2026-11-13T07:04:04.206Z",
@@ -36,6 +36,6 @@
       "configCount": 244
     }
   },
-  "lastFile": "5.txt",
-  "lastUpdated": "2026-11-25T00:50:07.980Z"
+  "lastFile": "6.txt",
+  "lastUpdated": "2026-11-26T11:24:38.445Z"
 }
