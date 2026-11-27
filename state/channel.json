@@ -1,14 +1,16 @@
 {
   "chatId": "-1002876391355",
-  "messageId": 4732,
+  "messageId": 4733,
   "mode": "classic",
   "summary": {
-    "updatedFile": "6.txt",
-    "totalConfigs": 331,
+    "updatedFile": "7.txt",
+    "totalConfigs": 292,
     "counts": {
-      "ss": 330,
-      "trojan": 1
+      "vless": 199,
+      "ss": 31,
+      "trojan": 60,
+      "hysteria2": 2
     }
   },
-  "updatedAt": "2026-11-26T11:24:38.725Z"
+  "updatedAt": "2026-11-27T03:04:27.755Z"
 }
